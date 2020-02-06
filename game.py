@@ -14,6 +14,8 @@ class Settings(object):
         # 界面设置
         self.bg_color = (42,42,42)
         self.tile_size = 32
+
+        self.level_name = "1"
         
         # 存储关卡数据
         # 0 = 空 -1 = 墙  1 = 人 2 = 箱 3 = 点
@@ -28,7 +30,8 @@ class Settings(object):
         #TODO: 屏幕宽高初始化太小时，背景 bg 显示不正确
 
         self.total_size = len(self.level[0])*len(self.level)
-        self.decoration = []
+
+        self.boxes = {}
         
 #存储及读取图像数据
 _image_library = {}
@@ -41,39 +44,34 @@ def get_image(path):
         _image_library[path] = image
     return image
 
-#存储及读取并转换地图数据
-_level_library = {}
+#读取并转换地图数据
 def get_level(path):
-    global _level_library
-    level = _level_library.get(path)
-    if level == None:
-        canonicalized_path = 'level' + os.sep + path + '.txt'
-        f = open(canonicalized_path,"r",encoding="utf-8")
-        level_cache = f.read().split('\n')
-        level = []
-        for i in level_cache:
-            #去掉可能出现的空行
-            if not i:
-                continue
+    canonicalized_path = 'level' + os.sep + path + '.txt'
+    f = open(canonicalized_path,"r",encoding="utf-8")
+    level_cache = f.read().split('\n')
+    f.close()
+    level = []
+    for i in level_cache:
+        #去掉可能出现的空行
+        if not i:
+            continue
+        row = []
+        for j in i:
+            # 0 = 空 -1 = 墙  1 = 人 2 = 箱 3 = 点
+            if j == '空' or j == "_" or j=="-":
+                row.append(0)
+            elif j == '墙' or j =="#":
+                row.append(-1)
+            elif j == '人' or j =="@":
+                row.append(1)
+            elif j == '箱' or j =="$":
+                row.append(2)                    
+            elif j == '点' or j ==".":
+                row.append(3)
+            else:
+                raise ValueError('读取关卡数据错误！请检查' + canonicalized_path)
+        level.append(row)
 
-            row = []
-            for j in i:
-                # 0 = 空 -1 = 墙  1 = 人 2 = 箱 3 = 点
-                if j == '空':
-                    row.append(0)
-                elif j == '墙':
-                    row.append(-1)
-                elif j == '人':
-                    row.append(1)
-                elif j == '箱':
-                    row.append(2)                    
-                elif j == '点':
-                    row.append(3)
-                else:
-                    raise ValueError('读取关卡数据错误！请检查' + canonicalized_path)
-            level.append(row)
-        
-        _image_library[path] = level
     return level
                 
 #玩家类
@@ -116,10 +114,12 @@ class Box():
         self.screen.blit(self.image,self.rect)
 
 
-def loadlevel(game,screen,bg,player,boxes):
+def loadlevel(game,screen,bg,player):
     """每次关卡只载入一次，读取并绘制整个关卡的背景，
     初始化元素位置。
     """
+    game.boxes = {}
+    boxes = {}
 
     size = game.tile_size
     game.screen_width = len(game.level[0]) * size+2
@@ -161,9 +161,12 @@ def loadlevel(game,screen,bg,player,boxes):
             z += 1
         y += 1
     
+    game.boxes = boxes
+    
 
 #刷新当前状态
-def redraw(game,screen,bg,player,boxes):
+def redraw(game,screen,bg,player):
+    boxes = game.boxes
     size = game.tile_size
 
     screen.blit(bg,(0,0))
@@ -172,23 +175,46 @@ def redraw(game,screen,bg,player,boxes):
     player.rect.centery = (player.y + 0.5) * size + 1
     player.blitme()
 
+    total = len(boxes)
+    done = 0
     for pos,box0 in boxes.items():
         box0.rect.centerx = (pos[0] + 0.5) * size + 1
         box0.rect.centery = (pos[1] + 0.5) * size + 1
         if game.level[box0.y][box0.x] == 3:
             box0.image = get_image("box_done")
+            done += 1
         else:
             box0.image = get_image("box_normal")
         box0.blitme()
-                
+
+    
     pygame.display.flip()
 
+
 #响应事件        
-def check_events(game,screen,player,boxes):
+def check_events(game,screen,bg,player):
+    boxes = game.boxes
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             exit()
         elif event.type == pygame.KEYDOWN:
+            if event.key >= 49 and event.key <= 57:
+                #key 1 - 9
+                number = event.key-48
+                print("Loading level:", number)
+                game.box = {}
+                game.level_name = str(number)
+                game.level = get_level(game.level_name)
+                loadlevel(game,screen,bg,player)
+                break
+
+            if event.key == pygame.K_F5:
+                #Reset Game
+                game.boxes = {} 
+                game.level = get_level(game.level_name)
+                loadlevel(game,screen,bg,player)
+                break
+
             # 0 = 空 -1 = 墙  1 = 人 2 = 箱 3 = 点
             x = player.x
             y = player.y
@@ -243,28 +269,30 @@ def run_game():
     game = Settings()
     pygame.display.set_caption("推箱子")
     pygame.display.set_icon(get_image('icon'))
+
     screen = pygame.display.set_mode((game.screen_width, game.screen_height))
     bg = pygame.Surface((game.screen_width, game.screen_height), 
                         pygame.SRCALPHA, 32)
 
     player = Player(screen)
 
-    boxes = {}  #{(3,5): box0,(4, 3): box1}
+    game.boxes = {} #{(3,5): box0,(4, 3): box1}
     
     clock = pygame.time.Clock()
     
-    game.level = get_level('1')
+    game.level_name = "1"
+    game.level = get_level(game.level_name)
 
-    loadlevel(game,screen,bg,player,boxes)
+    loadlevel(game,screen,bg,player)
     
     #print("paused for debug")
 
     while True:
-        check_events(game,screen,player,boxes)
+        check_events(game,screen,bg,player)
         
-        redraw(game,screen,bg,player,boxes)
+        redraw(game,screen,bg,player)
 
-        clock.tick(60)
+        clock.tick(30)
 
 run_game()
 
