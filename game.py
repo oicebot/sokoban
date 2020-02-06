@@ -50,6 +50,10 @@ def get_level(path):
         level_cache = f.read().split('\n')
         level = []
         for i in level_cache:
+            #去掉可能出现的空行
+            if not i:
+                continue
+
             row = []
             for j in i:
                 # 0 = 空 -1 = 墙  1 = 人 2 = 箱 3 = 点
@@ -111,6 +115,10 @@ class Box():
 
 
 def loadlevel(game,screen,bg,player,boxes):
+    """每次关卡只载入一次，读取并绘制整个关卡的背景，
+    初始化元素位置。
+    """
+
     size = game.tile_size
     game.screen_width = len(game.level[0]) * size+2
     game.screen_height = len(game.level) * size+2
@@ -131,7 +139,7 @@ def loadlevel(game,screen,bg,player,boxes):
                 player.y = y
                 item_name = 'floor'
                 game.level[y][x]=0
-
+                #此处不再追踪对象位置
             elif j == 2:
                 box0 = Box(screen)
                 box0.x = x
@@ -139,33 +147,27 @@ def loadlevel(game,screen,bg,player,boxes):
                 boxes.append(box0)
                 item_name = 'floor'
                 game.level[y][x]=0
+                #不在数组里追踪箱子位置
             elif j == 3:
                 item_name = 'target'
             else:
                 item_name = 'floor'
 
             bg.blit(get_image(item_name + str(randint(1,4))), (x * game.tile_size, y * game.tile_size))
+            #将所有图形绘制到 bg 对象上
             x += 1
             z += 1
         y += 1
-
-    player.rect.centerx = (player.x + 0.5) * game.tile_size + 1
-    player.rect.centery = (player.y + 0.5) * game.tile_size + 1
-
-    for box0 in boxes:
-        box0.rect.centerx = (box0.x + 0.5) * game.tile_size + 1
-        box0.rect.centery = (box0.y + 0.5) * game.tile_size + 1
-
     
 
 #刷新当前状态
 def redraw(game,screen,bg,player,boxes):
     size = game.tile_size
+
     screen.blit(bg,(0,0))
 
     player.rect.centerx = (player.x + 0.5) * size + 1
     player.rect.centery = (player.y + 0.5) * size + 1
-
     player.blitme()
 
     for box0 in boxes:
@@ -214,6 +216,8 @@ def run_game():
 
     loadlevel(game,screen,bg,player,boxes)
     
+    #print("paused for debug")
+
     while True:
         check_events(game,screen,player,boxes)
         
