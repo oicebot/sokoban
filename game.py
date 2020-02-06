@@ -110,15 +110,11 @@ class Box():
         self.screen.blit(self.image,self.rect)
 
 
-#刷新当前状态
-def redraw(game,screen,player,boxes):
+def loadlevel(game,screen,bg,player,boxes):
     size = game.tile_size
     game.screen_width = len(game.level[0]) * size+2
     game.screen_height = len(game.level) * size+2
     screen = pygame.display.set_mode((game.screen_width, game.screen_height))
-
-    if len(game.decoration) <= game.total_size:
-        game.decoration=[str(randint(1,4)) for x in range(game.total_size+10)]
 
     y = 0
     z = 0
@@ -148,7 +144,7 @@ def redraw(game,screen,player,boxes):
             else:
                 item_name = 'floor'
 
-            screen.blit(get_image(item_name + game.decoration[z]), (x * game.tile_size, y * game.tile_size))
+            bg.blit(get_image(item_name + str(randint(1,4))), (x * game.tile_size, y * game.tile_size))
             x += 1
             z += 1
         y += 1
@@ -156,11 +152,25 @@ def redraw(game,screen,player,boxes):
     player.rect.centerx = (player.x + 0.5) * game.tile_size + 1
     player.rect.centery = (player.y + 0.5) * game.tile_size + 1
 
-    player.blitme()
-
     for box0 in boxes:
         box0.rect.centerx = (box0.x + 0.5) * game.tile_size + 1
         box0.rect.centery = (box0.y + 0.5) * game.tile_size + 1
+
+    
+
+#刷新当前状态
+def redraw(game,screen,bg,player,boxes):
+    size = game.tile_size
+    screen.blit(bg,(0,0))
+
+    player.rect.centerx = (player.x + 0.5) * size + 1
+    player.rect.centery = (player.y + 0.5) * size + 1
+
+    player.blitme()
+
+    for box0 in boxes:
+        box0.rect.centerx = (box0.x + 0.5) * size + 1
+        box0.rect.centery = (box0.y + 0.5) * size + 1
         box0.blitme()
                 
     pygame.display.flip()
@@ -189,20 +199,27 @@ def run_game():
     pygame.init()
     game = Settings()
     pygame.display.set_caption("推箱子")
-    pygame.display.set_icon(get_image('icon2'))
+    pygame.display.set_icon(get_image('icon'))
     screen = pygame.display.set_mode((game.screen_width, game.screen_height))
+    bg = pygame.Surface((game.screen_width, game.screen_height), 
+                        pygame.SRCALPHA, 32)
+
     player = Player(screen)
+
     boxes =[]
     
     clock = pygame.time.Clock()
     
     game.level = get_level('2')
+
+    loadlevel(game,screen,bg,player,boxes)
     
     while True:
         check_events(game,screen,player,boxes)
         
-        redraw(game,screen,player,boxes)
+        redraw(game,screen,bg,player,boxes)
 
         clock.tick(60)
 
 run_game()
+
