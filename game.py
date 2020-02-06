@@ -23,8 +23,8 @@ class Settings(object):
                      [-1, 0, 0, 0, 0, 0,-1,],
                      [-1,-1,-1,-1,-1,-1,-1,]]
                       
-        self.screen_width = 400
-        self.screen_height = 300
+        self.screen_width = 1920
+        self.screen_height = 1080
         self.total_size = len(self.level[0])*len(self.level)
         self.decoration = []
         
@@ -113,6 +113,9 @@ class Box():
         #buld box at the specific location
         self.screen.blit(self.image,self.rect)
 
+    def get_pos(self):
+        return (self.x,self.y)
+
 
 def loadlevel(game,screen,bg,player,boxes):
     """每次关卡只载入一次，读取并绘制整个关卡的背景，
@@ -183,16 +186,23 @@ def check_events(game,screen,player,boxes):
         if event.type == pygame.QUIT:
             exit()
         elif event.type == pygame.KEYDOWN:
+            # 0 = 空 -1 = 墙  1 = 人 2 = 箱 3 = 点
+            x = player.x
+            y = player.y
             if event.key == pygame.K_RIGHT:
-                player.x +=1
+                if game.level[y][x+1] == 0 or game.level[y][x+1] == 3:
+                    player.x +=1
                 player.image = get_image('playerR')
             if event.key == pygame.K_LEFT:
-                player.x -=1
+                if game.level[y][x-1] == 0 or game.level[y][x-1] == 3:
+                    player.x -=1
                 player.image = get_image('playerL')
             if event.key == pygame.K_UP:
-                player.y -=1
+                if game.level[y-1][x] == 0 or game.level[y-1][x] == 3:
+                    player.y -=1
             if event.key == pygame.K_DOWN:
-                player.y +=1
+                if game.level[y+1][x] == 0 or game.level[y+1][x] == 3:
+                    player.y +=1
     
 
 #主进程
@@ -212,7 +222,7 @@ def run_game():
     
     clock = pygame.time.Clock()
     
-    game.level = get_level('2')
+    game.level = get_level('3')
 
     loadlevel(game,screen,bg,player,boxes)
     
