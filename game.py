@@ -25,6 +25,8 @@ class Settings(object):
                       
         self.screen_width = 1920
         self.screen_height = 1080
+        #TODO: 屏幕宽高初始化太小时，背景 bg 显示不正确
+
         self.total_size = len(self.level[0])*len(self.level)
         self.decoration = []
         
@@ -113,9 +115,6 @@ class Box():
         #buld box at the specific location
         self.screen.blit(self.image,self.rect)
 
-    def get_pos(self):
-        return (self.x,self.y)
-
 
 def loadlevel(game,screen,bg,player,boxes):
     """每次关卡只载入一次，读取并绘制整个关卡的背景，
@@ -142,12 +141,12 @@ def loadlevel(game,screen,bg,player,boxes):
                 player.y = y
                 item_name = 'floor'
                 game.level[y][x]=0
-                #此处不再追踪对象位置
+                #不在数组里追踪对象位置
             elif j == 2:
                 box0 = Box(screen)
                 box0.x = x
                 box0.y = y
-                boxes.append(box0)
+                boxes[(x,y)] = box0
                 item_name = 'floor'
                 game.level[y][x]=0
                 #不在数组里追踪箱子位置
@@ -173,9 +172,13 @@ def redraw(game,screen,bg,player,boxes):
     player.rect.centery = (player.y + 0.5) * size + 1
     player.blitme()
 
-    for box0 in boxes:
-        box0.rect.centerx = (box0.x + 0.5) * size + 1
-        box0.rect.centery = (box0.y + 0.5) * size + 1
+    for pos,box0 in boxes.items():
+        box0.rect.centerx = (pos[0] + 0.5) * size + 1
+        box0.rect.centery = (pos[1] + 0.5) * size + 1
+        if game.level[box0.y][box0.x] == 3:
+            box0.image = get_image("box_done")
+        else:
+            box0.image = get_image("box_normal")
         box0.blitme()
                 
     pygame.display.flip()
@@ -190,18 +193,46 @@ def check_events(game,screen,player,boxes):
             x = player.x
             y = player.y
             if event.key == pygame.K_RIGHT:
-                if game.level[y][x+1] == 0 or game.level[y][x+1] == 3:
+                #右边一格有箱子
+                if (x+1,y) in boxes.keys(): 
+                    #右边两个没有箱子，而且是地板或是点
+                    if not boxes.get((x+2,y)) and ( game.level[y][x+2] == 0 or game.level[y][x+2] == 3 ):
+                        box0 = boxes.pop((x+1,y)) #取出箱子对象
+                        box0.x = x+2              #移动
+                        boxes[(x+2,y)]=box0       #放回数组里
+                        player.x +=1              #移动玩家
+                #右边一格是地板或是点
+                elif game.level[y][x+1] == 0 or game.level[y][x+1] == 3:
                     player.x +=1
                 player.image = get_image('playerR')
+
             if event.key == pygame.K_LEFT:
-                if game.level[y][x-1] == 0 or game.level[y][x-1] == 3:
+                if (x-1,y) in boxes.keys(): 
+                    if not boxes.get((x-2,y)) and ( game.level[y][x-2] == 0 or game.level[y][x-2] == 3 ):
+                        box0 = boxes.pop((x-1,y)) #取出箱子对象
+                        box0.x = x-2              #移动
+                        boxes[(x-2,y)]=box0       #放回数组里
+                        player.x -=1              #移动玩家
+                elif game.level[y][x-1] == 0 or game.level[y][x-1] == 3:
                     player.x -=1
                 player.image = get_image('playerL')
             if event.key == pygame.K_UP:
-                if game.level[y-1][x] == 0 or game.level[y-1][x] == 3:
+                if (x,y-1) in boxes.keys(): 
+                    if not boxes.get((x,y-2)) and ( game.level[y-2][x] == 0 or game.level[y-2][x] == 3 ):
+                        box0 = boxes.pop((x,y-1)) #取出箱子对象
+                        box0.y = y-2              #移动
+                        boxes[(x,y-2)]=box0       #放回数组里
+                        player.y -=1              #移动玩家
+                elif game.level[y-1][x] == 0 or game.level[y-1][x] == 3:
                     player.y -=1
             if event.key == pygame.K_DOWN:
-                if game.level[y+1][x] == 0 or game.level[y+1][x] == 3:
+                if (x,y+1) in boxes.keys(): 
+                    if not boxes.get((x,y+2)) and ( game.level[y+2][x] == 0 or game.level[y+2][x] == 3 ):
+                        box0 = boxes.pop((x,y+1)) #取出箱子对象
+                        box0.y = y+2              #移动
+                        boxes[(x,y+2)]=box0       #放回数组里
+                        player.y +=1              #移动玩家
+                elif game.level[y+1][x] == 0 or game.level[y+1][x] == 3:
                     player.y +=1
     
 
@@ -218,11 +249,11 @@ def run_game():
 
     player = Player(screen)
 
-    boxes =[]
+    boxes = {}  #{(3,5): box0,(4, 3): box1}
     
     clock = pygame.time.Clock()
     
-    game.level = get_level('3')
+    game.level = get_level('1')
 
     loadlevel(game,screen,bg,player,boxes)
     
